@@ -106,11 +106,11 @@ export default function SecurityOverviewPage() {
             <div className="w-10 h-10 rounded-xl bg-[#C7A66A]/10 border border-[#C7A66A]/30 flex items-center justify-center text-[#DFC492]">
               <Key className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-[#F2EFE8]">AES-256-GCM Credential Encryption</h3>
+            <h3 className="text-lg font-bold text-[#F2EFE8]">Fernet Authenticated Credential Encryption</h3>
             <p className="text-xs sm:text-sm text-[#A8A398] leading-relaxed">
               Implemented in <code className="text-[#DFC492] bg-white/5 px-1.5 py-0.5 rounded font-mono text-xs">app/core/security.py</code>.
               User-provided API keys for Groq, Gemini, OpenRouter, OpenAI, and xAI are encrypted at rest using
-              cryptographic authenticated encryption.
+              Fernet authenticated symmetric encryption (AES-128-CBC with HMAC-SHA256 authentication).
             </p>
             <ul className="space-y-2 text-xs text-[#C2BEB4] pt-1">
               <li className="flex items-center gap-2">

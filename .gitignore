@@ -37,5 +37,21 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
-
 backend/.pytest-temp/
+
+# Academic Deliverables & Personal Submission Materials
+GRID07_Project_Report.docx
+GRID07_Project_Report.md
+GRID07_Project_Presentation.pptx
+GRID07 — Master Full-Stack Product Build Prompt.md
+*.docx
+*.pptx
+
+# Report Generation Scripts & Academic Assets
+build_full_report_docx.py
+generate_grid07_presentation.py
+generate_report_assets.py
+report_helpers.py
+capture_ui.py
+diagrams/
+screenshots/
