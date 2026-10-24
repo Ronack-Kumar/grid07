@@ -35,7 +35,7 @@ class AgentState(TypedDict):
     search_results: str
     final_output: Dict[str, Any]
 
-class AgentExecutionGraph:
+class LegacyAgentExecutionGraph:
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("GROQ_API_KEY", "")
         self.retrieval_service = RetrievalService()
@@ -137,3 +137,7 @@ The human just replied. Respond to the substantive point only. If their message 
         g.add_edge("web_search", "generate")
         g.add_edge("generate", END)
         return g.compile()
+
+
+# Backward-compatible import path. The active implementation uses the unified LLM router.
+from app.services.agents.orchestration import AgentExecutionGraph  # noqa: E402

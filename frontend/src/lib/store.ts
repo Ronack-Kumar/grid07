@@ -1,12 +1,13 @@
 import { create } from 'zustand';
+import type { User, Workspace } from './types';
 
 interface AuthState {
   token: string | null;
-  user: any | null;
-  workspace: any | null;
+  user: User | null;
+  workspace: Workspace | null;
   setToken: (token: string) => void;
-  setUser: (user: any) => void;
-  setWorkspace: (workspace: any) => void;
+  setUser: (user: User) => void;
+  setWorkspace: (workspace: Workspace) => void;
   logout: () => void;
 }
 

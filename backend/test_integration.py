@@ -1,56 +1,48 @@
-import requests
+"""Optional live smoke check. Run directly while the backend is already running."""
+
+import os
 import time
 
-API = "http://localhost:8000/api/v1"
-s = requests.Session()
+import requests
 
-# 1. Login
-r = s.post(f"{API}/auth/login", data={"username": "admin@grid07.com", "password": "password123"})
-assert r.status_code == 200, r.text
-token = r.json()["access_token"]
-s.headers.update({"Authorization": f"Bearer {token}"})
 
-# 2. Get Workspace
-r = s.get(f"{API}/workspaces")
-assert r.status_code == 200, r.text
-workspaces = r.json()
-if not workspaces:
-    r = s.post(f"{API}/workspaces", json={"name": "Test Workspace"})
-    assert r.status_code == 200
-    ws_id = r.json()["id"]
-else:
-    ws_id = workspaces[0]["id"]
+def main() -> None:
+    api = os.getenv("GRID07_API_URL", "http://localhost:8000/api/v1")
+    email = os.getenv("GRID07_TEST_EMAIL")
+    password = os.getenv("GRID07_TEST_PASSWORD")
+    if not email or not password:
+        raise SystemExit("Set GRID07_TEST_EMAIL and GRID07_TEST_PASSWORD for the live integration check.")
 
-# 3. Create Agents
-print("Creating agents...")
-agents_data = [
-    {"name": "Tech Analyst", "persona": "A pragmatic software engineer obsessed with performance.", "capabilities": ["code", "tech"]},
-    {"name": "Venture Capitalist", "persona": "A high-risk tolerant investor looking for 100x returns.", "capabilities": ["finance", "startups"]}
-]
-agent_ids = []
-for a in agents_data:
-    r = s.post(f"{API}/workspaces/{ws_id}/agents", json=a)
-    if r.status_code == 200:
-        agent_ids.append(r.json()["id"])
-    else:
-        # Check if already exists? This is a naive test script.
-        pass
+    session = requests.Session()
+    login = session.post(f"{api}/auth/login", data={"username": email, "password": password}, timeout=10)
+    login.raise_for_status()
+    session.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
 
-# 4. Trigger Execution
-print("Triggering execution...")
-r = s.post(f"{API}/workspaces/{ws_id}/executions", json={"input_text": "What is the latest AI breakthrough according to recent news? Should we invest?"})
-assert r.status_code == 200, r.text
-exec_id = r.json()["id"]
+    workspaces = session.get(f"{api}/workspaces/", timeout=10)
+    workspaces.raise_for_status()
+    workspace_id = workspaces.json()[0]["id"]
+    agents = session.get(f"{api}/workspaces/{workspace_id}/agents", timeout=10)
+    agents.raise_for_status()
+    if not agents.json():
+        raise SystemExit("Create a persona before running the live integration check.")
+    agent_id = agents.json()[0]["id"]
 
-# 5. Poll for completion
-print("Polling...")
-for _ in range(30):
-    time.sleep(1)
-    r = s.get(f"{API}/workspaces/{ws_id}/executions/{exec_id}")
-    status = r.json()["status"]
-    print(f"Status: {status}")
-    if status in ["COMPLETED", "FAILED"]:
-        print(f"Final output: {r.json().get('output_text')}")
-        break
+    run = session.post(
+        f"{api}/workspaces/{workspace_id}/agents/{agent_id}/test",
+        json={"input_text": "Give a concise live provider health response."},
+        timeout=10,
+    )
+    run.raise_for_status()
+    execution_id = run.json()["id"]
+    for _ in range(30):
+        execution = session.get(f"{api}/workspaces/{workspace_id}/executions/{execution_id}", timeout=10)
+        execution.raise_for_status()
+        if execution.json()["status"] in {"COMPLETED", "FAILED"}:
+            print(execution.json())
+            return
+        time.sleep(1)
+    raise SystemExit("Live execution did not finish within 30 seconds.")
 
-print("Integration test complete.")
+
+if __name__ == "__main__":
+    main()

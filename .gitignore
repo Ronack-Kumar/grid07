@@ -26,6 +26,7 @@ out/
 *.db
 *.sqlite
 *.sqlite3
+*.db.*.bak
 
 # Logs & temp
 *.log
@@ -36,3 +37,5 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+backend/.pytest-temp/

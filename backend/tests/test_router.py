@@ -1,35 +1,51 @@
+import numpy as np
 import pytest
-from app.services.routing.embeddings import EmbeddingService
-from app.services.routing.router import PersonaRouter
 
-# A mock Agent class to simulate SQLAlchemy model
+from app.services.routing.router import PersonaRouter, cosine_similarity
+
+
 class MockAgent:
-    def __init__(self, id, name, description):
-        self.id = id
+    def __init__(self, identifier, name, description):
+        self.id = identifier
         self.name = name
         self.description = description
 
+
+class FakeEmbeddingService:
+    vectors = {
+        "bitcoin market": np.array([1.0, 0.0, 0.0]),
+        "Finance finance cryptocurrency stocks": np.array([1.0, 0.0, 0.0]),
+        "Tech software react programming": np.array([0.0, 1.0, 0.0]),
+        "Health health nutrition fitness": np.array([0.0, 0.0, 1.0]),
+    }
+
+    async def get_embedding(self, text):
+        return self.vectors[text]
+
+
+def test_cosine_similarity_handles_zero_and_mismatched_dimensions():
+    assert cosine_similarity(np.zeros(3), np.ones(3)) == 0.0
+    with pytest.raises(ValueError):
+        cosine_similarity(np.ones(2), np.ones(3))
+
+
 @pytest.mark.asyncio
-async def test_persona_routing():
-    embedding_service = EmbeddingService()
-    router = PersonaRouter(embedding_service=embedding_service)
-    
+async def test_persona_routing_selects_only_highest_matching_persona():
+    router = PersonaRouter(FakeEmbeddingService())
     agents = [
-        MockAgent("1", "Finance Agent", "Expert in cryptocurrency, stocks, and macroeconomics."),
-        MockAgent("2", "Tech Agent", "Expert in software engineering, AI models, and programming."),
-        MockAgent("3", "Health Agent", "Expert in fitness, nutrition, and medical advice.")
+        MockAgent("1", "Finance", "finance cryptocurrency stocks"),
+        MockAgent("2", "Tech", "software react programming"),
+        MockAgent("3", "Health", "health nutrition fitness"),
     ]
-    
-    # Test a finance query
-    finance_query = "What is the current price of Bitcoin?"
-    decisions = await router.route_input(finance_query, agents)
-    
-    # The selected agent should be Finance Agent (id "1")
-    selected = [d for d in decisions if d["selected"]][0]
-    assert selected["agent_id"] == "1"
-    
-    # Test a tech query
-    tech_query = "How do I write a React hook?"
-    decisions2 = await router.route_input(tech_query, agents)
-    selected2 = [d for d in decisions2 if d["selected"]][0]
-    assert selected2["agent_id"] == "2"
+    decisions = await router.route_input("bitcoin market", agents, threshold=0.8)
+    selected = [decision for decision in decisions if decision["selected"]]
+    assert len(selected) == 1
+    assert selected[0]["agent_id"] == "1"
+
+
+@pytest.mark.asyncio
+async def test_persona_routing_returns_no_selection_below_threshold():
+    router = PersonaRouter(FakeEmbeddingService())
+    agents = [MockAgent("2", "Tech", "software react programming")]
+    decisions = await router.route_input("bitcoin market", agents, threshold=0.8)
+    assert decisions[0]["selected"] is False
